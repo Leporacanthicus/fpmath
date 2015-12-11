@@ -22,9 +22,9 @@ public:
 	T whole;
 	struct
 	{
-	    T sign: 1;
-	    T exp: EBITS;
 	    T mant: MBITS;
+	    T exp: EBITS;
+	    T sign: 1;
 	} bits;
     };
 
@@ -54,7 +54,7 @@ template<typename T, int EBITS, int MBITS>
 Float<T, EBITS, MBITS>::Float(int s, int e, T m)
 {
     val.bits.sign = s;
-    val.bits.exp = e;
+    val.bits.exp = e + expOffset;
     val.bits.mant = m;
 }
 
@@ -65,7 +65,7 @@ T operator+(T lhs, T rhs)
     int le = lhs.Exp();
     int re = rhs.Exp();
     typename T::intType lm = lhs.Mant();
-    typename T::intType rm = lhs.Mant();
+    typename T::intType rm = rhs.Mant();
     int diff = re - le;
     if ( diff > 0 )
     {
@@ -77,14 +77,14 @@ T operator+(T lhs, T rhs)
     }
     int newExp = std::max(le, re);
     typename T::intType m = rm + lm;
-    while (m > 1 << T::mantBits)
+    typename T::intType mask = (1 << T::mantBits)-1;
+    while ((m & ~((1 << T::mantBits)-1)) > 1 << T::mantBits)
     {
 	newExp ++;
 	m >>= 1;
     }
-    m &= (1 << T::mantBits)-1;
-    std::cout << "m=" << m << std::endl;
-    T res(0, newExp-T::expOffset, m);
+    m &= mask;
+    T res(0, newExp, m);
     return res;
 }
 
@@ -98,6 +98,9 @@ int main()
     FP16 c = a + b;
     std::cout << std::hex << a.val.whole << std::endl;
     std::cout << std::hex << b.val.whole << std::endl;
+    c = c + a;
+    std::cout << std::hex << c.val.whole << std::endl;
+    c = c + b;
     std::cout << std::hex << c.val.whole << std::endl;
 }
 
