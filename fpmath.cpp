@@ -28,6 +28,8 @@ public:
 	} bits;
     };
 
+    Float operator+=(Float rhs);
+
     int Exp() { return val.bits.exp - expOffset; }
     T Mant();
     
@@ -58,14 +60,13 @@ Float<T, EBITS, MBITS>::Float(int s, int e, T m)
     val.bits.mant = m;
 }
 
-
-template<typename T>
-T operator+(T lhs, T rhs)
+template<typename T, int EBITS, int MBITS>
+Float<T, EBITS, MBITS> Float<T, EBITS, MBITS>::operator+=(Float<T, EBITS, MBITS> rhs)
 {
-    int le = lhs.Exp();
+    int le = Exp();
     int re = rhs.Exp();
-    typename T::intType lm = lhs.Mant();
-    typename T::intType rm = rhs.Mant();
+    intType lm = Mant();
+    intType rm = rhs.Mant();
     int diff = re - le;
     if ( diff > 0 )
     {
@@ -75,16 +76,28 @@ T operator+(T lhs, T rhs)
     {
 	rm >>= -diff;
     }
+
     int newExp = std::max(le, re);
-    typename T::intType m = rm + lm;
-    typename T::intType mask = (1 << T::mantBits)-1;
-    while ((m & ~((1 << T::mantBits)-1)) > 1 << T::mantBits)
+    intType m = rm + lm;
+    intType mask = (1 << mantBits)-1;
+    while ((m & ~((1 << mantBits)-1)) > (1 << mantBits))
     {
 	newExp ++;
 	m >>= 1;
     }
     m &= mask;
-    T res(0, newExp, m);
+    val.bits.mant = m;
+    val.bits.exp = newExp + expOffset;
+    
+    return *this;
+}
+
+
+template<typename T>
+T operator+(T lhs, T rhs)
+{
+    T res = lhs;
+    res += rhs;
     return res;
 }
 
@@ -101,6 +114,8 @@ int main()
     c = c + a;
     std::cout << std::hex << c.val.whole << std::endl;
     c = c + b;
+    std::cout << std::hex << c.val.whole << std::endl;
+    c += a;
     std::cout << std::hex << c.val.whole << std::endl;
 }
 
