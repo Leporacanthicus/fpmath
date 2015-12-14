@@ -34,11 +34,20 @@ public:
     Float operator+=(const Float& rhs);
     Float operator-=(const Float& rhs);
 
+    Float operator-() const
+	{
+	    Float tmp = *this;
+	    tmp.Sign(!Negative());
+	    return tmp;
+	}
+
     int Exp() const { return val.bits.exp - expOffset; }
     T Mant() const;
+    bool Negative() const { return !!val.bits.sign; }
+
     void Mant(T m) { val.bits.mant = m & mantMask; }
     void Exp(int e) { val.bits.exp = e + expOffset; }
-    
+    void Sign(bool s) { val.bits.sign = s; }
 //private:
     FloatValue val;
 };
@@ -62,6 +71,10 @@ T Float<T, EBITS, MBITS>::Mant() const
 template<typename T, int EBITS, int MBITS>
 Float<T, EBITS, MBITS> Float<T, EBITS, MBITS>::operator+=(const Float<T, EBITS, MBITS>& rhs)
 {
+    if (rhs.Negative())
+    {
+	return (*this) -= -rhs;
+    }
     int newExp = Exp();
     int re = rhs.Exp();
     intType lm = Mant();
@@ -92,6 +105,10 @@ Float<T, EBITS, MBITS> Float<T, EBITS, MBITS>::operator+=(const Float<T, EBITS, 
 template<typename T, int EBITS, int MBITS>
 Float<T, EBITS, MBITS> Float<T, EBITS, MBITS>::operator-=(const Float<T, EBITS, MBITS>& rhs)
 {
+    if (rhs.Negative())
+    {
+	return (*this) += -rhs;
+    }
     int newExp = Exp();
     int re = rhs.Exp();
     intType lm = Mant();
@@ -107,7 +124,16 @@ Float<T, EBITS, MBITS> Float<T, EBITS, MBITS>::operator-=(const Float<T, EBITS, 
 	rm >>= -diff;
     }
 
-    intType m = lm - rm;
+    intType m;
+    if (rm > lm)
+    {
+	m = rm - lm;
+	Sign(!Negative());
+    }
+    else
+    {
+	m = lm - rm;
+    }
     while ((m & ~mantMask) < (1 << mantBits))
     {
 	newExp --;
@@ -177,4 +203,11 @@ int main()
 
     f -= e;
     std::cout << FP32ToFloat(f) << std::endl;
+
+    FP32 g(FloatToFP32(1.0));
+    FP32 h(FloatToFP32(1.5));
+
+    FP32 i = g - h;
+
+    std::cout << FP32ToFloat(i) << std::endl;
 }
